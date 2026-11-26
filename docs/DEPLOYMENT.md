@@ -13,7 +13,7 @@ python3 tools/verify_sources.py
 python3 tools/prepare_workspace.py
 ```
 
-prepare_workspace复制cluster中的Python/shell文件和requirements到工作目录顶层。文件已存在且不同则拒绝覆盖；它不修改src，不启动任务。
+prepare_workspace复制cluster中的Python/shell文件和requirements到工作目录顶层，并为四个组件生成source-commit.txt，使原训练入口在没有独立.git目录时仍能记录组件基准版本。已有文件不同则在写入前拒绝覆盖；它不修改组件源码，不启动任务。root仓库commit及Bridge补丁记录另见Git与sources.lock.json，组件source-commit.txt本身不代表适配修改已包含在上游提交中。
 
 在Linux ARM64建立Python3.12虚拟环境，按requirements中的runtime/adaptor/model/bridge-compat/tokenizer约束安装依赖。模型加载需要ModelOpt distill/Megatron插件；成功实测使用nvidia-modelopt0.44.0。源码包使用现有依赖进行editable安装，防止自动重解整套适配栈：
 

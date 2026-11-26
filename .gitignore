@@ -6,6 +6,8 @@
 /*.zip
 /*.docx
 /report.jpg
+/scripts/
+**/source-commit.txt
 /*.md
 !/README.md
 !/SOURCE_CHANGES.md

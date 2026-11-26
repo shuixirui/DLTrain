@@ -2,23 +2,30 @@
 
 import argparse
 import hashlib
+import json
 from pathlib import Path
 
 
 def prepare(root, dry_run=False):
     sources = sorted((root / "cluster").glob("*.py")) + sorted((root / "cluster").glob("*.sh"))
     sources += sorted((root / "requirements").glob("*.txt"))
-    conflicts = [root / source.name for source in sources
-                 if (root / source.name).exists() and (root / source.name).read_bytes() != source.read_bytes()]
+    entries = {root / source.name: source.read_bytes() for source in sources}
+    lock = json.loads((root / "sources.lock.json").read_text(encoding="utf-8"))
+    for component in lock["components"]:
+        # Existing audited trainers recognize this metadata when a component
+        # is vendored without its original .git directory.
+        entries[root / component["directory"] / "source-commit.txt"] = (component["commit"] + "\n").encode()
+    conflicts = [path for path, data in entries.items()
+                 if path.exists() and path.read_bytes() != data]
     if conflicts:
         raise RuntimeError("Refusing to replace differing existing files: " + ", ".join(str(path) for path in conflicts))
-    for source in sources:
-        destination = root / source.name
+    for destination, data in entries.items():
         if not dry_run and not destination.exists():
-            destination.write_bytes(source.read_bytes())
-        print(("CHECK" if dry_run else "READY"), destination.name,
-              hashlib.sha256(source.read_bytes()).hexdigest())
-    return len(sources)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(data)
+        print(("CHECK" if dry_run else "READY"), destination.relative_to(root),
+              hashlib.sha256(data).hexdigest())
+    return len(entries)
 
 
 if __name__ == "__main__":
