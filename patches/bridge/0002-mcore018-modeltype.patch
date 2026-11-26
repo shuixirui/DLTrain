@@ -1,0 +1,26 @@
+--- before/src/megatron/bridge/models/model_provider.py
++++ after/src/megatron/bridge/models/model_provider.py
+@@ -601,7 +601,7 @@
+         parallel_state.get_pipeline_model_parallel_world_size() > 1
+         and parallel_state.get_virtual_pipeline_model_parallel_world_size() is not None
+     ):
+-        assert model_type != ModelType.encoder_and_decoder, (
++        assert (not hasattr(ModelType, "encoder_and_decoder") or (model_type != ModelType.encoder_and_decoder)), (
+             "Interleaved schedule not supported for model with both encoder and decoder"
+         )
+         model = []
+@@ -618,7 +618,7 @@
+     else:
+         pre_process = parallel_state.is_pipeline_first_stage()
+         post_process = parallel_state.is_pipeline_last_stage()
+-        if model_type == ModelType.encoder_and_decoder:
++        if (hasattr(ModelType, "encoder_and_decoder") and (model_type == ModelType.encoder_and_decoder)):
+             if parallel_state.get_pipeline_model_parallel_world_size() > 1:
+                 rank = parallel_state.get_pipeline_model_parallel_rank()
+                 first_decoder_rank = parallel_state.get_pipeline_model_parallel_decoder_start()
+@@ -717,3 +717,5 @@
+             ),
+             flush=True,
+         )
++
++# mcore018-legacy-modeltype-comparisons

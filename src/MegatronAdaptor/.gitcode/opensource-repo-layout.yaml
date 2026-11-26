@@ -1,0 +1,10 @@
+project: Ascend/MegatronAdaptor
+directories:
+  - path: "./megatron_adaptor/"
+    type: source
+  - path: "setup.py"
+    type: source
+  - path: "./megatron_adaptor/patches/megatron/ddp_one_shot_stream.py"
+    type: upstream
+  - path: "./megatron_adaptor/patches/transformer_engine/transformer_engine.py"
+    type: upstream

@@ -1,0 +1,88 @@
+--- before/src/megatron/bridge/models/qwen_vl/qwen3_vl_bridge.py
++++ after/src/megatron/bridge/models/qwen_vl/qwen3_vl_bridge.py
+@@ -477,13 +477,21 @@
+     def __init__(self, *args, **kwargs):
+         super().__init__(*args, **kwargs)
+ 
+-    def hf_to_megatron(self, hf_weights: torch.Tensor, megatron_module: nn.Module) -> torch.Tensor:
+-        global_expert_number = extract_expert_number_from_param(self.megatron_param)
+-        expert_weight = hf_weights[global_expert_number] if hf_weights.ndim >= 3 else hf_weights
+-
+-        normalized_param = self._normalize_expert_param_name(self.megatron_param)
+-        _, target_param = get_module_and_param_from_name(megatron_module, normalized_param)
+-        expert_weight = _align_weight_to_shape(expert_weight, target_param.shape, "down_proj")
++    def hf_to_megatron(self, hf_weights, megatron_module):
++        if self.tp_rank != 0:
++            return super().hf_to_megatron(None, megatron_module)
++        if hf_weights is None:
++            raise ValueError("Missing HF down weights on ETP rank 0")
++        expert_number = extract_expert_number_from_param(self.megatron_param)
++        expert_weight = hf_weights[expert_number] if hf_weights.ndim >= 3 else hf_weights
++        name = self._normalize_expert_param_name(self.megatron_param)
++        _, target_param = get_module_and_param_from_name(megatron_module, name)
++        local_shape = tuple(target_param.shape)
++        if len(local_shape) != 2:
++            raise ValueError(f"Invalid local down shape: {local_shape}")
++        full_shape = (local_shape[0], local_shape[1] * self.tp_size)
++        expert_weight = _align_weight_to_shape(expert_weight, full_shape, "down_proj")
++        expert_weight = expert_weight.to(dtype=target_param.dtype)
+         return super().hf_to_megatron(expert_weight, megatron_module)
+ 
+     def _validate_patterns(self, *args, **kwargs):
+@@ -508,26 +516,31 @@
+             up=f"{self.hf_param}.up",
+         )
+ 
+-    def hf_to_megatron(self, hf_weights: Union[torch.Tensor, Dict], megatron_module: nn.Module) -> torch.Tensor:
+-        global_expert_number = extract_expert_number_from_param(self.megatron_param)
+-        expert_weight = hf_weights[global_expert_number] if hf_weights.ndim >= 3 else hf_weights
+-
+-        normalized_param = self._normalize_expert_param_name(self.megatron_param)
+-        _, target_param = get_module_and_param_from_name(megatron_module, normalized_param)
+-        target_shape = target_param.shape
+-        gate_target_shape = (target_shape[0] // 2, target_shape[1])
+-
+-        if target_shape[0] % 2 != 0:
+-            raise ValueError(f"Expected even fused dim for {self.megatron_param}, got {target_shape}.")
+-
++    def hf_to_megatron(self, hf_weights, megatron_module):
++        if self.tp_rank != 0:
++            return self._gated_mapping.hf_to_megatron(None, megatron_module)
++        if hf_weights is None:
++            raise ValueError("Missing HF gate/up weights on ETP rank 0")
++        expert_number = extract_expert_number_from_param(self.megatron_param)
++        expert_weight = hf_weights[expert_number] if hf_weights.ndim >= 3 else hf_weights
++        name = self._normalize_expert_param_name(self.megatron_param)
++        _, target_param = get_module_and_param_from_name(megatron_module, name)
++        local_shape = tuple(target_param.shape)
++        if len(local_shape) != 2 or local_shape[0] % 2:
++            raise ValueError(f"Invalid local gate/up shape: {local_shape}")
++        full_shape = (local_shape[0] * self.tp_size, local_shape[1])
++        gate_shape = (full_shape[0] // 2, full_shape[1])
+         if expert_weight.ndim == 3 and expert_weight.shape[0] == 2:
+-            gate = _align_weight_to_shape(expert_weight[0], gate_target_shape, "gate")
+-            up = _align_weight_to_shape(expert_weight[1], gate_target_shape, "up")
++            gate = _align_weight_to_shape(expert_weight[0], gate_shape, "gate")
++            up = _align_weight_to_shape(expert_weight[1], gate_shape, "up")
+         else:
+-            expert_weight = _align_weight_to_shape(expert_weight, target_shape, "gate_up")
++            expert_weight = _align_weight_to_shape(expert_weight, full_shape, "gate_up")
+             gate, up = torch.chunk(expert_weight, 2, dim=0)
+-
+-        return self._gated_mapping.hf_to_megatron({"gate": gate, "up": up}, megatron_module)
++        gate = gate.to(dtype=target_param.dtype)
++        up = up.to(dtype=target_param.dtype)
++        return self._gated_mapping.hf_to_megatron(
++            {"gate": gate, "up": up}, megatron_module
++        )
+ 
+     def megatron_to_hf(self, megatron_weights: torch.Tensor, megatron_module: nn.Module) -> Dict[str, torch.Tensor]:
+         converted = self._gated_mapping.megatron_to_hf(megatron_weights, megatron_module)
+@@ -547,4 +560,5 @@
+         return fused
+ 
+     def _validate_patterns(self, *args, **kwargs):
+-        pass
+\ No newline at end of file
++        pass
++# expert-etp-full-shape-before-scatter
