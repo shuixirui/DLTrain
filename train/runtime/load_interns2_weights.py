@@ -10,7 +10,7 @@ import torch.distributed as dist
 from safetensors import safe_open
 
 workdir = Path(os.environ["WORKDIR"])
-model_dir = Path("/mnt/afs-a3-weight-share/Intern-S2-Preview")
+model_dir = Path(os.environ.get("MODEL_PATH", "/mnt/afs-a3-weight-share/Intern-S2-Preview"))
 local_rank = int(os.environ["LOCAL_RANK"])
 
 torch.npu.set_device(local_rank)

@@ -12,7 +12,7 @@ def prepare(root, dry_run=False):
         ("train/runtime", "*.py"), ("train/launch", "*.sh"),
         ("train/environment", "fix_*.sh"),
         ("train/environment/requirements", "*.txt"),
-        ("data", "*.py"), ("data", "*.sh"), ("benchmark", "*.py"),
+        ("train/preprocess", "*.py"), ("examples/benchmark", "*.py"),
     ):
         sources.extend(sorted((root / relative).glob(pattern)))
     entries = {}
@@ -23,9 +23,17 @@ def prepare(root, dry_run=False):
         entries[destination] = source.read_bytes()
     components = runpy.run_path(str(root / "train/environment/component_versions.py"))["COMPONENTS"]
     for component in components:
+        if component.get("entry_point") and not (root / component["directory"] / component["entry_point"]).is_file():
+            raise FileNotFoundError("Component source entry point missing: " + component["directory"])
         # Existing audited trainers recognize this metadata when a component
         # is vendored without its original .git directory.
         entries[root / component["directory"] / "source-commit.txt"] = (component["commit"] + "\n").encode()
+    by_name = {component.get("name"): root / component["directory"] for component in components}
+    if "Megatron-LM" in by_name and "Megatron-Bridge" in by_name:
+        link = by_name["Megatron-Bridge"] / "3rdparty/Megatron-LM"
+        target = link.readlink() if link.is_symlink() else Path(link.read_text(encoding="utf-8"))
+        if (link.parent / target).resolve() != by_name["Megatron-LM"].resolve():
+            raise RuntimeError("Bridge Core source link does not resolve to DLTrain-framework")
     conflicts = [path for path, data in entries.items()
                  if path.exists() and path.read_bytes() != data]
     if conflicts:

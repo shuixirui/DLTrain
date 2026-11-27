@@ -1,6 +1,7 @@
 """Tokenize a local UTF-8 text/JSONL corpus for an explicitly recorded training run."""
 
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -16,11 +17,14 @@ def sha256_file(path):
 
 
 def documents(path, field):
-    with path.open(encoding="utf-8-sig") as source:
+    compressed = path.suffix.lower() == ".gz"
+    suffix = path.with_suffix("").suffix.lower() if compressed else path.suffix.lower()
+    source_file = gzip.open(path, "rt", encoding="utf-8-sig") if compressed else path.open(encoding="utf-8-sig")
+    with source_file as source:
         for line_number, line in enumerate(source, 1):
             if not line.strip():
                 continue
-            if path.suffix.lower() == ".jsonl":
+            if suffix in (".json", ".jsonl"):
                 record = json.loads(line)
                 text = record.get(field) if isinstance(record, dict) else None
                 if not isinstance(text, str):
@@ -39,8 +43,9 @@ def main():
     parser.add_argument("--text-field", default="text")
     parser.add_argument("--max-tokens", type=int, default=2_000_000)
     args = parser.parse_args()
-    if args.input.suffix.lower() not in (".txt", ".jsonl"):
-        parser.error("--input must be a UTF-8 .txt or .jsonl file")
+    suffix = args.input.with_suffix("").suffix.lower() if args.input.suffix.lower() == ".gz" else args.input.suffix.lower()
+    if suffix not in (".txt", ".json", ".jsonl"):
+        parser.error("--input must contain UTF-8 text or line-delimited JSON, optionally gzip-compressed")
     if args.max_tokens < 1024:
         parser.error("--max-tokens must be at least 1024")
 

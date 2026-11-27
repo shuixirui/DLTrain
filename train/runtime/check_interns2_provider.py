@@ -3,6 +3,8 @@ import os
 import sys
 from pathlib import Path
 
+model_path = os.environ.get("MODEL_PATH", "/mnt/afs-a3-weight-share/Intern-S2-Preview")
+
 import torch
 from transformers.utils.import_utils import is_flash_linear_attention_available
 
@@ -14,7 +16,7 @@ from transformers.dynamic_module_utils import get_class_from_dynamic_module
 
 InternS2HF = get_class_from_dynamic_module(
     "modeling_interns2_preview.InternS2PreviewForConditionalGeneration",
-    "/mnt/afs-a3-weight-share/Intern-S2-Preview",
+    model_path,
     local_files_only=True,
 )
 transformers.InternS2PreviewForConditionalGeneration = InternS2HF
@@ -23,7 +25,7 @@ print("HF_CLASS_REGISTERED:", InternS2HF.__module__, flush=True)
 import megatron_adaptor
 
 workdir = Path(os.environ["WORKDIR"])
-sys.path.insert(0, str(workdir / "src/DLTrain-Megatron-Bridge-interns2/src"))
+sys.path.insert(0, str(workdir / "src/DLTrain-Bridge/src"))
 
 from megatron.bridge import AutoBridge
 from megatron.bridge.models.conversion.model_bridge import MegatronModelBridge
@@ -45,7 +47,7 @@ from transformers import AutoConfig
 from megatron.bridge.models.conversion import auto_bridge as ab_module
 
 hf_config = AutoConfig.from_pretrained(
-    "/mnt/afs-a3-weight-share/Intern-S2-Preview",
+    model_path,
     trust_remote_code=True,
     local_files_only=True,
 )
@@ -66,7 +68,7 @@ class InternS2PreviewCausalBridge(InternS2PreviewBridge):
 print("BRIDGE_LOOKUP_KEY:", lookup_key, flush=True)
 
 bridge = AutoBridge.from_hf_pretrained(
-    "/mnt/afs-a3-weight-share/Intern-S2-Preview",
+    model_path,
     trust_remote_code=True,
     local_files_only=True,
 )

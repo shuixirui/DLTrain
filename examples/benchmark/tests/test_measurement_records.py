@@ -3,6 +3,7 @@
 from _paths import ROOT
 
 import json
+import gzip
 import tempfile
 import unittest
 import warnings
@@ -98,6 +99,14 @@ class MeasurementIntegrityTests(unittest.TestCase):
         self.assertEqual(list(documents(source, "body")), ["actual text"])
         with self.assertRaises(ValueError):
             list(documents(source, "text"))
+
+    def test_original_gzip_json_lines_preserves_raw_content(self):
+        source = self.run / "en_head.json.gz"
+        with gzip.open(source, "wt", encoding="utf-8") as output:
+            output.write('{"raw_content":"first document"}\n\n{"raw_content":"second document"}\n')
+        self.assertEqual(list(documents(source, "raw_content")), ["first document", "second document"])
+        with self.assertRaises(ValueError):
+            list(documents(source, "missing_field"))
 
 
 if __name__ == "__main__":

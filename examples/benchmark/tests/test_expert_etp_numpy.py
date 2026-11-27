@@ -6,13 +6,23 @@ This does not test real process groups or NPU collectives.
 
 from _paths import ROOT
 
+import ast
 import re
 import textwrap
 from types import SimpleNamespace
 
 import numpy as np
 
-from patch_expert_etp import METHODS
+mapping_file = ROOT / "src/DLTrain-Bridge/src/megatron/bridge/models/qwen_vl/qwen3_vl_bridge.py"
+tree = ast.parse(mapping_file.read_text(encoding="utf-8"))
+METHODS = {
+    node.name: ast.unparse(method)
+    for node in tree.body
+    if isinstance(node, ast.ClassDef) and node.name in ("ExpertMLPGateUpProjMapping", "ExpertMLPDownProjMapping")
+    for method in node.body
+    if isinstance(method, ast.FunctionDef) and method.name == "hf_to_megatron"
+}
+assert len(METHODS) == 2
 
 
 class Tensor:

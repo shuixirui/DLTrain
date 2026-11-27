@@ -16,7 +16,7 @@ from safetensors import safe_open
 from optimizer_update_probe import capture_update_points, verify_update_points
 
 workdir = Path(os.environ["WORKDIR"])
-model_dir = Path("/mnt/afs-a3-weight-share/Intern-S2-Preview")
+model_dir = Path(os.environ.get("MODEL_PATH", "/mnt/afs-a3-weight-share/Intern-S2-Preview"))
 local_rank = int(os.environ["LOCAL_RANK"])
 torch.npu.set_device(local_rank)
 dist.init_process_group("hccl", timeout=timedelta(minutes=15))

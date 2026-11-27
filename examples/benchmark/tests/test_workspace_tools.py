@@ -44,6 +44,17 @@ class WorkspacePreparationTests(unittest.TestCase):
             self.assertEqual((root / "train.py").stat().st_mtime_ns, previous)
             self.assertEqual((root / "train.py").read_bytes(), b"original runtime\n")
 
+    def test_missing_component_entry_point_stops_before_runtime_copy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            (root / "train/environment/component_versions.py").write_text(
+                "COMPONENTS = " + repr([{"directory": "src/missing", "commit": "a" * 40,
+                                         "entry_point": "package/__init__.py"}]) + "\n")
+            with self.assertRaises(FileNotFoundError):
+                module.prepare(root)
+            self.assertFalse((root / "train.py").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

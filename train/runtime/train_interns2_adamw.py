@@ -47,7 +47,7 @@ if args.data_mode == "text" and args.corpus_dir is None:
     parser.error("text mode requires --corpus-dir prepared by prepare_interns2_corpus.py")
 
 workdir = Path(os.environ["WORKDIR"])
-model_dir = Path("/mnt/afs-a3-weight-share/Intern-S2-Preview")
+model_dir = Path(os.environ.get("MODEL_PATH", "/mnt/afs-a3-weight-share/Intern-S2-Preview"))
 local_rank = int(os.environ["LOCAL_RANK"])
 torch.npu.set_device(local_rank)
 dist.init_process_group("hccl", timeout=timedelta(minutes=15))
@@ -205,7 +205,7 @@ def package_versions():
 
 def source_versions():
     versions = {}
-    for name in ("DLTrain-Megatron-LM", "DLTrain-MegatronAdaptor", "DLTrain-TransformerEngineNPU-2.17", "DLTrain-Megatron-Bridge-interns2"):
+    for name in ("DLTrain-framework", "DLTrain-Adaptor", "DLTrain-NPUEngine", "DLTrain-Bridge"):
         path = workdir / "src" / name
         if (path / ".git").exists():
             command = ["/usr/bin/git", "-c", f"safe.directory={path}", "-C", str(path)]
@@ -227,7 +227,7 @@ if rank == 0:
         if path.is_file():
             script_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
             (args.run_dir / name).write_bytes(path.read_bytes())
-    bridge_root = workdir / "src/DLTrain-Megatron-Bridge-interns2/src/megatron/bridge"
+    bridge_root = workdir / "src/DLTrain-Bridge/src/megatron/bridge"
     bridge_hashes = {}
     for path in sorted(bridge_root.rglob("*.py")):
         bridge_hashes[str(path.relative_to(bridge_root))] = hashlib.sha256(path.read_bytes()).hexdigest()
