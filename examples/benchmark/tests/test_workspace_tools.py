@@ -6,18 +6,18 @@ import tempfile
 import unittest
 
 
-spec = importlib.util.spec_from_file_location("prepare_workspace", ROOT / "train/environment/prepare_workspace.py")
+spec = importlib.util.spec_from_file_location("prepare_workspace", ROOT / "tools/environment/prepare_workspace.py")
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
 class WorkspacePreparationTests(unittest.TestCase):
     def fixture(self, root):
-        (root / "train/runtime").mkdir(parents=True)
-        (root / "train/environment/requirements").mkdir(parents=True)
-        (root / "train/runtime/train.py").write_bytes(b"original runtime\n")
-        (root / "train/environment/requirements/runtime.txt").write_bytes(b"pinned dependency\n")
-        (root / "train/environment/component_versions.py").write_text(
+        (root / "tools/runtime").mkdir(parents=True)
+        (root / "tools/environment/requirements").mkdir(parents=True)
+        (root / "tools/runtime/train.py").write_bytes(b"original runtime\n")
+        (root / "tools/environment/requirements/runtime.txt").write_bytes(b"pinned dependency\n")
+        (root / "tools/environment/component_versions.py").write_text(
             "COMPONENTS = " + repr([{"directory": "src/component", "commit": "a" * 40}]) + "\n")
 
     def test_conflicting_runtime_preserved_and_nothing_else_written(self):
@@ -48,7 +48,7 @@ class WorkspacePreparationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.fixture(root)
-            (root / "train/environment/component_versions.py").write_text(
+            (root / "tools/environment/component_versions.py").write_text(
                 "COMPONENTS = " + repr([{"directory": "src/missing", "commit": "a" * 40,
                                          "entry_point": "package/__init__.py"}]) + "\n")
             with self.assertRaises(FileNotFoundError):

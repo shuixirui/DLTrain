@@ -63,7 +63,7 @@ def load_probe():
         equal=lambda left, right: np.array_equal(left, right),
     )
     common = SimpleNamespace(scalar=float, active_indices=lambda *args: (_ for _ in ()).throw(AssertionError("Unexpected large tensor")))
-    spec = importlib.util.spec_from_file_location("_cpu_adamw_dist_probe", ROOT / "train/runtime/adamw_dist_update_probe.py")
+    spec = importlib.util.spec_from_file_location("_cpu_adamw_dist_probe", ROOT / "tools/runtime/adamw_dist_update_probe.py")
     module = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, {"torch": torch, "optimizer_update_probe": common}):
         spec.loader.exec_module(module)

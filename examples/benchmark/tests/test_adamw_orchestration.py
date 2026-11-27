@@ -19,7 +19,7 @@ class CoordinatorTests(unittest.TestCase):
     script_name = "run_interns2_adamw.sh"
 
     def run_case(self, mode):
-        original = (ROOT / "train/launch" / self.script_name).read_text(encoding="utf-8")
+        original = (ROOT / "tools/launch" / self.script_name).read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory(prefix=".adamw-test-", dir=Path(__file__).resolve().parent) as directory:
             root = Path(directory)
             (root / ".venv/bin").mkdir(parents=True)

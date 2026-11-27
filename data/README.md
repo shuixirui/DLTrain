@@ -14,4 +14,4 @@
 
 这是单个英文head分片。数据来源、授权和原始网页信息见官方数据集说明及记录中的来源字段。
 
-分词逻辑位于`train/preprocess/prepare_interns2_corpus.py`；示例启动脚本会从本原始文件生成独立token缓存。早期训练曾先筛选JSONL再分词，示例当前直接读取原始分片，缓存签名会与早期筛选版本不同。
+分词逻辑位于`tools/preprocess/prepare_interns2_corpus.py`；示例启动脚本会从本原始文件生成独立token缓存。早期训练曾先筛选JSONL再分词，示例当前直接读取原始分片，缓存签名会与早期筛选版本不同。

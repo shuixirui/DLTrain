@@ -7,7 +7,7 @@ bash examples/interns2/run.sh --dry-run
 MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview bash examples/interns2/run.sh
 ```
 
-`--dry-run`只打印准备、分词和训练命令，可在没有模型或NPU的本机检查。实际运行需准备[昇腾环境](../../train/README.md)和16个逻辑NPU。脚本使用仓库data/en_head.json.gz的原始RedPajama分片，不执行数据采集。
+`--dry-run`只打印准备、分词和训练命令，可在没有模型或NPU的本机检查。实际运行需准备[昇腾环境](../../tools/README.md)和16个逻辑NPU。脚本使用仓库data/en_head.json.gz的原始RedPajama分片，不执行数据采集。
 
 | 环境变量 | 默认值或用途 |
 | --- | --- |

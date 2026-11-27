@@ -9,10 +9,10 @@ from pathlib import Path
 def prepare(root, dry_run=False):
     sources = []
     for relative, pattern in (
-        ("train/runtime", "*.py"), ("train/launch", "*.sh"),
-        ("train/environment", "fix_*.sh"),
-        ("train/environment/requirements", "*.txt"),
-        ("train/preprocess", "*.py"), ("examples/benchmark", "*.py"),
+        ("tools/runtime", "*.py"), ("tools/launch", "*.sh"),
+        ("tools/environment", "fix_*.sh"),
+        ("tools/environment/requirements", "*.txt"),
+        ("tools/preprocess", "*.py"), ("examples/benchmark", "*.py"),
     ):
         sources.extend(sorted((root / relative).glob(pattern)))
     entries = {}
@@ -21,7 +21,7 @@ def prepare(root, dry_run=False):
         if destination in entries:
             raise RuntimeError("Duplicate runtime entry-point filename: " + source.name)
         entries[destination] = source.read_bytes()
-    components = runpy.run_path(str(root / "train/environment/component_versions.py"))["COMPONENTS"]
+    components = runpy.run_path(str(root / "tools/environment/component_versions.py"))["COMPONENTS"]
     for component in components:
         if component.get("entry_point") and not (root / component["directory"] / component["entry_point"]).is_file():
             raise FileNotFoundError("Component source entry point missing: " + component["directory"])

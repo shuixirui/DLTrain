@@ -45,7 +45,7 @@ if [[ ! "$run_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
     exit 2
 fi
 
-prepare=(python "$WORKDIR/train/environment/prepare_workspace.py")
+prepare=(python "$WORKDIR/tools/environment/prepare_workspace.py")
 tokenize=(python "$WORKDIR/prepare_interns2_corpus.py"
     --input "$raw_data" --text-field raw_content --model-path "$MODEL_PATH"
     --output-dir "$CORPUS_DIR" --max-tokens 2000000)
