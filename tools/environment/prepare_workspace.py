@@ -12,7 +12,7 @@ def prepare(root, dry_run=False):
         ("tools/runtime", "*.py"), ("tools/launch", "*.sh"),
         ("tools/environment", "fix_*.sh"),
         ("tools/environment/requirements", "*.txt"),
-        ("tools/preprocess", "*.py"), ("examples/benchmark", "*.py"),
+        ("tools/preprocess", "*.py"), ("tools/benchmark", "*.py"),
     ):
         sources.extend(sorted((root / relative).glob(pattern)))
     entries = {}

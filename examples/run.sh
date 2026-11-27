@@ -2,7 +2,7 @@
 set -eo pipefail
 
 example_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-export WORKDIR="$(cd -- "$example_dir/../.." && pwd)"
+export WORKDIR="$(cd -- "$example_dir/.." && pwd)"
 export MODEL_PATH="${MODEL_PATH:-/mnt/afs-a3-weight-share/Intern-S2-Preview}"
 export CORPUS_DIR="${CORPUS_DIR:-$WORKDIR/datasets/interns2-redpajama-raw}"
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -21,7 +21,7 @@ dry_run=0
 case "${1:-}" in
     --dry-run) dry_run=1; shift ;;
     --help|-h)
-        printf '%s\n' 'Usage: bash examples/interns2/run.sh [--dry-run]' \
+        printf '%s\n' 'Usage: bash examples/run.sh [--dry-run]' \
             'Environment: MODEL_PATH, VENV_PATH, TRAIN_STEPS (20), SCHEDULE_STEPS (500),' \
             'SEQ_LENGTH (64), NUM_MICROBATCHES (4), CORPUS_DIR, RUN_ID.'
         exit 0 ;;

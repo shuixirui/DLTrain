@@ -17,13 +17,15 @@ class ExampleLauncherTests(unittest.TestCase):
         for name in ("TRAIN_STEPS", "SCHEDULE_STEPS", "SEQ_LENGTH", "NUM_MICROBATCHES", "RUN_ID"):
             environment.pop(name, None)
         environment.update(changes)
-        return subprocess.run([BASH, str(ROOT / "examples/interns2/run.sh"), "--dry-run"],
+        return subprocess.run([BASH, str(ROOT / "examples/run.sh"), "--dry-run"],
                               cwd=ROOT, env=environment, capture_output=True, text=True,
                               encoding="utf-8", errors="replace", timeout=20)
 
     def test_preview_uses_raw_data_and_twenty_steps_without_loading_model(self):
         result = self.preview(MODEL_PATH="/model-that-does-not-exist")
         self.assertEqual(result.returncode, 0, result.stderr)
+        workdir = next(line.split("=", 1)[1] for line in result.stdout.splitlines() if line.startswith("WORKDIR="))
+        self.assertEqual(Path(workdir).name, ROOT.name)
         self.assertIn("--steps 20", result.stdout)
         self.assertIn("--text-field raw_content", result.stdout)
         self.assertIn("data/en_head.json.gz", result.stdout)

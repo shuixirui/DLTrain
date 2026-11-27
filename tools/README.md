@@ -19,7 +19,7 @@ Bridge通过Provider中的源码路径加载，不单独安装以重解依赖。
 ```bash
 MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview \
 VENV_PATH=/mnt/afs-ptdata-shared/sxr/dltrain-mcore018/.venv \
-bash examples/interns2/run.sh
+bash examples/run.sh
 ```
 
 启动脚本以当前仓库为WORKDIR，默认20步、SEQ64、MBS1、DP8、梯度累积4，即GBS32；TP2/PP1/EP8/ETP2/CP1，BF16。优化器为Core原生分布式AdamW，峰值LR1e-5，沿用500步余弦调度及20步warmup，示例只执行前20步。
@@ -28,7 +28,7 @@ bash examples/interns2/run.sh
 
 environment/prepare_workspace.py检查源码入口与Bridge的Core链接，随后将运行资源复制到仓库顶层，以适配现有训练入口；发现同名文件内容不同会停止。它还按component_versions.py记录组件基准版本，不安装依赖或启动NPU任务。
 
-运行日志写入logs/<RUN_ID>.log，逐步测量、配置、摘要和更新探针结果写入runs/<RUN_ID>/。数据与模型权重路径可通过MODEL_PATH、CORPUS_DIR等环境变量调整。脚本参数和预览命令见[示例说明](../examples/interns2/README.md)。
+运行日志写入logs/<RUN_ID>.log，逐步测量、配置、摘要和更新探针结果写入runs/<RUN_ID>/。数据与模型权重路径可通过MODEL_PATH、CORPUS_DIR等环境变量调整。脚本参数和预览命令见[示例说明](../examples/README.md)。
 
 ## 已有训练入口
 

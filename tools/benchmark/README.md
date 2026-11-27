@@ -5,10 +5,10 @@
 在仓库根目录运行：
 
 ```bash
-python -m unittest discover -s examples/benchmark/tests -v
-python examples/benchmark/plot_interns2_log.py /path/to/launcher.log --output-dir results/report
-python examples/benchmark/plot_interns2_log.py /path/to/launcher.log --last-step 200 --output-dir results/first200
-python examples/benchmark/audit_interns2_warnings.py /path/to/launcher.log --output results/warning-audit.json
+python -m unittest discover -s tools/benchmark/tests -v
+python tools/benchmark/plot_interns2_log.py /path/to/launcher.log --output-dir results/report
+python tools/benchmark/plot_interns2_log.py /path/to/launcher.log --last-step 200 --output-dir results/first200
+python tools/benchmark/audit_interns2_warnings.py /path/to/launcher.log --output results/warning-audit.json
 ```
 
 绘图需要NumPy和Matplotlib。图表及CSV按日志打印精度生成，正式500步与3步验证阶段分开，完整性检查失败时不会补点或伪造通过状态。移动平均、梯度对数轴及耗时预热范围均在图中标注。
