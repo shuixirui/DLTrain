@@ -1,51 +1,48 @@
 # DLTrain
 
-面向昇腾的分布式训练代码，提供Intern-S2-Preview 35B模型加载、训练更新验证和日志报告。完整训练源码随仓库提供，普通clone无需初始化submodule。
+面向昇腾的分布式训练代码，提供Intern-S2-Preview 35B的权重加载、训练和参数更新验证。仓库包含framework、Bridge、Adaptor和NPUEngine的全部源码，无需初始化submodule。
 
-## 使用
+## 安装和运行
 
 ```bash
 git clone https://github.com/shuixirui/DLTrain.git
 cd DLTrain
 bash install.sh
 bash examples/run.sh --dry-run
+MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview bash examples/run.sh
 ```
 
-准备好昇腾环境和模型权重后，执行：
-
-```bash
-bash examples/run.sh
-```
-
-`install.sh`面向已具备驱动和CANN的Linux ARM64开发机，默认使用Python3.12.13创建仓库内`.venv-dltrain`，安装固定核心依赖及仓库源码，并检查NPU和导入路径。支持ZIP解压目录；不会启动训练。安装日志与实际包版本保存在`logs/install-*.log`和对应的`*-packages.txt`。完整前提、镜像及环境变量见[安装说明](tools/README.md)。
+`install.sh`用于已有驱动和CANN的Linux ARM64开发机，默认创建`.venv-dltrain`，安装依赖及仓库源码，并检查NPU和实际导入路径。支持Git和ZIP源码目录。安装日志及实际包版本写入`logs/install-*.log`和对应的`*-packages.txt`。具体镜像、依赖和环境变量见[环境说明](tools/README.md)。
 
 ```bash
 bash install.sh --dry-run
 MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview bash install.sh --check-provider
 ```
 
-隔离测试环境可在安装和运行时指定同一路径：
+使用其他虚拟环境时，安装和运行指定同一路径：
 
 ```bash
 VENV_PATH="$PWD/.venv-clean-test" bash install.sh --check-provider
 VENV_PATH="$PWD/.venv-clean-test" bash examples/run.sh
 ```
 
-示例默认20个优化器更新步、SEQ64、GBS32和16个逻辑NPU，使用仓库中的RedPajama原始分片。脚本先准备工作目录和原生tokenizer缓存，再启动分布式AdamW训练；`--dry-run`仅预览命令。完整环境要求及参数见[训练说明](tools/README.md)和[Intern-S2示例](examples/README.md)。
+示例默认运行20个优化器更新步，SEQ64、GBS32，使用16个逻辑NPU及Core原生分布式AdamW。原始RedPajama数据随仓库提供，分词后再训练；参数及运行方式见[示例说明](examples/README.md)。
 
 ## 目录
 
-| 目录 | 内容 |
+| 路径 | 用途 |
 | --- | --- |
-| [src/](src/) | DLTrain-framework、DLTrain-Bridge、DLTrain-Adaptor和DLTrain-NPUEngine完整源码 |
-| [tools/](tools/) | 环境准备、模型加载、训练、分词和更新探针 |
-| [examples/](examples/) | 可执行启动脚本和模型运行说明 |
-| [tools/benchmark/](tools/benchmark/README.md) | 实测日志解析、绘图和本地检查 |
-| [data/](data/README.md) | RedPajama原始分片和来源说明 |
+| [src/](src/) | 四个组件的完整源码；分词实现在framework/tools/prepare_interns2_corpus.py |
+| [examples/](examples/) | run.sh启动脚本、train_interns2.py训练入口和参数说明 |
+| [tools/environment/](tools/environment/) | 环境准备、依赖清单和组件基准版本 |
+| [tools/validation/](tools/validation/) | Provider检查、分布式AdamW更新验证和相关辅助函数 |
+| [data/](data/README.md) | RedPajama原始分片及来源说明 |
 
-## 源码与验证
+启动与加载输出保存在`logs/<RUN_ID>.log`，逐步指标、配置、来源快照及更新检查记录保存在`runs/<RUN_ID>/`。脚本直接使用所在目录，不再将训练和验证脚本复制到仓库顶层。
 
-组件基准版本保存在[环境准备代码](tools/environment/component_versions.py)，DLTrain自身修改以Git提交为准。Bridge的ModelType兼容与专家ETP修复已直接合入源码，无需额外打补丁。目录名称不改变组件的Python模块名。
+## 来源与验证范围
+
+组件基准提交记录在[component_versions.py](tools/environment/component_versions.py)，DLTrain自身变动以Git提交为准。Bridge中的ModelType兼容及专家ETP修复已合入源码。目录名称不改变原有Python模块名。
 
 | 组件来源 | 原始许可证 |
 | --- | --- |
@@ -54,11 +51,4 @@ VENV_PATH="$PWD/.venv-clean-test" bash examples/run.sh
 | [Ascend/TransformerEngineNPU](https://gitcode.com/Ascend/TransformerEngineNPU) | [LICENSE](src/DLTrain-NPUEngine/LICENSE) |
 | [NVIDIA-NeMo/Megatron-Bridge](https://github.com/NVIDIA-NeMo/Megatron-Bridge) | [LICENSE](src/DLTrain-Bridge/LICENSE) |
 
-本地检查与日志绘图：
-
-```bash
-python -m unittest discover -s tools/benchmark/tests -v
-python tools/benchmark/plot_interns2_log.py /path/to/launcher.log --output-dir results/report
-```
-
-已有独立SEQ64 / GBS8和GBS32的500步实测及部分权重、首步更新抽检。目录整理后的示例启动流程已做本地预览和检查；实际NPU训练仍需相应环境。完整数值一致性、指定起始权重身份和DLRL联合RL更新及导出交接仍待专项验证。
+提交239cde3的ZIP源码已在原开发机的新目录与独立虚拟环境中完成20步训练，16个rank的专家权重抽检和首步参数更新验证通过，退出码为0。此前另有GBS8、GBS32的500步实测。当前精简和目录迁移使用本地路径及流程检查验证，尚待NPU复验；install.sh入口与全新开发机安装也待验证。完整权重/梯度数值一致性、指定起始权重身份及DLRL真实RL更新仍需专项验证。

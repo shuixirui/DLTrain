@@ -22,8 +22,11 @@ import torch
 import torch.distributed as dist
 import torch_npu  # noqa: F401
 from safetensors import safe_open
-from adamw_update_probe import capture_update_points, verify_update_points
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools/validation"))
+
+from adamw_dist_update_probe import capture_update_points, verify_update_points
 from adamw_math import scheduled_lr
+from adamw_shard_layout import owned_parameter_shards
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--steps", type=int, default=500)
@@ -53,7 +56,7 @@ torch.npu.set_device(local_rank)
 dist.init_process_group("hccl", timeout=timedelta(minutes=15))
 rank, world = dist.get_rank(), dist.get_world_size()
 assert world == 16
-state = runpy.run_path(str(workdir / "check_interns2_provider.py"))
+state = runpy.run_path(str(workdir / "tools/validation/check_interns2_provider.py"))
 provider = state["provider"]
 provider.seq_length = args.seq_length
 provider.language_max_sequence_length = args.seq_length
@@ -71,7 +74,8 @@ from megatron.core.utils import get_model_config
 
 ddp_config = DistributedDataParallelConfig(
     grad_reduce_in_fp32=True, overlap_grad_reduce=False,
-    use_distributed_optimizer=False, check_for_nan_in_grad=True,
+    overlap_param_gather=False,
+    use_distributed_optimizer=True, check_for_nan_in_grad=True,
 )
 if rank == 0:
     print("START_DDP_WEIGHT_LOAD", flush=True)
@@ -145,9 +149,21 @@ optimizer_config = OptimizerConfig(
     optimizer="adam", lr=args.lr, weight_decay=0.01, decoupled_weight_decay=True,
     adam_beta1=0.9, adam_beta2=0.999, adam_eps=1e-8, use_precision_aware_optimizer=False,
     bf16=True, fp16=False, params_dtype=torch.bfloat16,
-    use_distributed_optimizer=False, clip_grad=1.0,
+    use_distributed_optimizer=True, clip_grad=1.0,
 )
 optimizer = get_megatron_optimizer(optimizer_config, models, use_gloo_process_groups=False)
+local_shards = owned_parameter_shards(named_params, optimizer)
+optimizer_layout = {
+    "rank": rank, "use_distributed_optimizer": True,
+    "dense_dp_size": mpu.get_data_parallel_world_size(),
+    "expert_dp_size": mpu.get_expert_data_parallel_world_size(),
+    "local_master_elements": sum(shard["master"].numel() for shard in local_shards),
+    "local_dense_master_elements": sum(shard["master"].numel() for shard in local_shards if getattr(shard["param"], "allreduce", True)),
+    "local_expert_master_elements": sum(shard["master"].numel() for shard in local_shards if not getattr(shard["param"], "allreduce", True)),
+    "optimizer_types": sorted({type(shard["leaf"]).__name__ for shard in local_shards}),
+}
+print("DISTRIBUTED_OPTIMIZER_LAYOUT:", json.dumps(optimizer_layout), flush=True)
+del local_shards
 config = get_model_config(model)
 config.grad_scale_func = optimizer.scale_loss
 config.finalize_model_grads_func = finalize_model_grads
@@ -222,11 +238,18 @@ if rank == 0:
     args.run_dir.mkdir(parents=True, exist_ok=True)
     assert not (args.run_dir / "metrics.jsonl").exists(), "Refusing to append a new training run to existing metrics"
     script_hashes = {}
-    for name in (Path(__file__).name, "adamw_update_probe.py", "adamw_math.py", "optimizer_update_probe.py", "check_interns2_provider.py", "run_interns2_adamw.sh", "plot_interns2_adamw.py"):
+    for name in ("examples/train_interns2.py", "examples/run.sh", "install.sh",
+                 "tools/validation/adamw_dist_update_probe.py", "tools/validation/adamw_shard_layout.py",
+                 "tools/validation/adamw_math.py", "tools/validation/optimizer_update_probe.py",
+                 "tools/validation/check_interns2_provider.py",
+                 "src/DLTrain-framework/tools/prepare_interns2_corpus.py",
+                 "tools/environment/prepare_workspace.py", "tools/environment/component_versions.py"):
         path = workdir / name
         if path.is_file():
             script_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
-            (args.run_dir / name).write_bytes(path.read_bytes())
+            snapshot = args.run_dir / name
+            snapshot.parent.mkdir(parents=True, exist_ok=True)
+            snapshot.write_bytes(path.read_bytes())
     bridge_root = workdir / "src/DLTrain-Bridge/src/megatron/bridge"
     bridge_hashes = {}
     for path in sorted(bridge_root.rglob("*.py")):
@@ -239,7 +262,8 @@ if rank == 0:
         "world_size": world, "tp": 2, "pp": 1, "ep": 8, "etp": 2, "cp": 1, "dp": dp_size,
         "seq_length": args.seq_length, "micro_batch_size": 1, "num_microbatches": args.num_microbatches,
         "global_batch_size": global_batch, "tokens_per_step": global_batch * args.seq_length,
-        "optimizer": "Megatron AdamW", "lr": args.lr, "weight_decay": 0.01, "clip_grad": 1.0,
+        "optimizer": "Megatron distributed AdamW", "use_distributed_optimizer": True,
+        "optimizer_layout_rank0": optimizer_layout, "overlap_param_gather": False, "lr": args.lr, "weight_decay": 0.01, "clip_grad": 1.0,
         "adam_betas": [0.9, 0.999], "adam_eps": 1e-8, "run_role": args.run_role,
         "lr_schedule": {"type": "linear_warmup_cosine", "peak_lr": args.lr, "min_lr": args.min_lr, "warmup_steps": args.warmup_steps, "schedule_steps": args.schedule_steps, "convention": "step 1 uses peak_lr/warmup_steps; final schedule step uses min_lr"},
         "dtype": "bfloat16", "seed": args.seed, "data_mode": args.data_mode,
@@ -373,3 +397,4 @@ except BaseException as error:
     raise
 finally:
     dist.destroy_process_group()
+

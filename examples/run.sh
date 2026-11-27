@@ -46,11 +46,11 @@ if [[ ! "$run_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
 fi
 
 prepare=(python "$WORKDIR/tools/environment/prepare_workspace.py")
-tokenize=(python "$WORKDIR/prepare_interns2_corpus.py"
+tokenize=(python "$WORKDIR/src/DLTrain-framework/tools/prepare_interns2_corpus.py"
     --input "$raw_data" --text-field raw_content --model-path "$MODEL_PATH"
     --output-dir "$CORPUS_DIR" --max-tokens 2000000)
 train=(python -m torch.distributed.run --standalone --nnodes=1 --nproc-per-node=16
-    "$WORKDIR/train_interns2_adamw_dist.py" --run-dir "$run_dir" --run-role measurement
+    "$WORKDIR/examples/train_interns2.py" --run-dir "$run_dir" --run-role measurement
     --steps "$train_steps" --schedule-steps "$schedule_steps" --warmup-steps 20
     --lr "${LEARNING_RATE:-0.00001}" --min-lr "${MIN_LEARNING_RATE:-0.000001}"
     --seq-length "$seq_length" --num-microbatches "$num_microbatches"

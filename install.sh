@@ -73,7 +73,7 @@ print_plan() {
     printf '%s\n' 'Verify NPU availability and imports from the repository source directories.'
     if (( check_provider )); then
         printf 'MODEL_PATH=%s\n' "$MODEL_PATH"
-        print_command "$venv_python" "$WORKDIR/check_interns2_provider.py"
+        print_command "$venv_python" "$WORKDIR/tools/validation/check_interns2_provider.py"
     fi
 }
 
@@ -188,7 +188,7 @@ PY
         export CUDA_DEVICE_MAX_CONNECTIONS=1
         export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
         export QWEN35_DEBUG="${QWEN35_DEBUG:-0}"
-        "$venv_python" "$WORKDIR/check_interns2_provider.py"
+        "$venv_python" "$WORKDIR/tools/validation/check_interns2_provider.py"
     fi
     "$venv_python" -m pip freeze > "$WORKDIR/logs/$install_id-packages.txt"
     printf '\nDLTRAIN_CLEAN_ENV_READY\n'

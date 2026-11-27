@@ -117,6 +117,7 @@ fields = list(expected) + list(settings) + [
 summary = {name: getattr(provider, name, None) for name in fields}
 text = json.dumps(summary, indent=2, default=str)
 print(text, flush=True)
+(workdir / "logs").mkdir(parents=True, exist_ok=True)
 (workdir / "logs/interns2-provider.json").write_text(
     text + "\n", encoding="utf-8",
 )

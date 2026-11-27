@@ -1,75 +1,62 @@
-# 环境与训练
+# 环境与验证
 
-实测软件组合：Linux ARM64、Python3.12.13、CANN9.1.0镜像、PyTorch2.10.0、torch-npu2.10.0.post7、Triton-Ascend3.6.0.post2、TENPU2.17.1、Transformers5.2.0、NumPy1.26.4和PyArrow24.0.0。训练使用16个逻辑NPU。依赖约束在environment/requirements/；其中部分为范围约束，不等同于完整环境锁文件或镜像摘要。
+tools只保留安装与20步训练需要的12个功能文件：environment中7个，validation中5个。训练入口位于顶层examples/，分词实现在src/DLTrain-framework/tools/prepare_interns2_corpus.py。
 
-## 安装环境
+## 环境安装
 
-开发机需预先提供昇腾驱动、CANN、Python3.12及C++编译器。此前实测使用平台镜像`registry2.d.pjlab.org.cn/ccr-lepton-official-images/a3-cann:9.1.0-a3-ubuntu22.04-py3.12`；镜像标签不等于镜像摘要。安装脚本不安装系统驱动或CANN。
+实测组合为Linux ARM64、Python3.12.13、CANN9.1.0镜像、PyTorch2.10.0、torch-npu2.10.0.post7、Triton-Ascend3.6.0.post2、TENPU2.17.1、Transformers5.2.0、NumPy1.26.4及PyArrow24.0.0。训练使用16个逻辑NPU。此前平台镜像为`registry2.d.pjlab.org.cn/ccr-lepton-official-images/a3-cann:9.1.0-a3-ubuntu22.04-py3.12`；该标签不等于镜像摘要。
 
-在仓库根目录执行：
+开发机需提供驱动、CANN、Python3.12及C++编译器。仓库根目录执行：
 
 ```bash
 bash install.sh
 ```
 
-默认使用`/usr/local/python3.12.13/bin/python3.12`创建`.venv-dltrain`，安装依赖和三个editable源码包，准备运行入口，再检查NPU、Bridge/ModelOpt导入及四个组件的实际源码路径。默认不需要模型权重。使用`bash install.sh --dry-run`可只预览命令，不创建环境或下载依赖。
+默认创建仓库内`.venv-dltrain`，安装依赖和三个editable源码包，检查组件路径、Bridge/ModelOpt导入及NPU。Bridge通过源码路径加载，不单独重解其依赖。ModelOpt固定0.44.0，原生tokenizer使用sentencepiece0.2.1。
 
 | 环境变量 | 默认值或用途 |
 | --- | --- |
-| VENV_PATH | 当前仓库的.venv-dltrain；运行examples/run.sh时需指定相同路径 |
+| VENV_PATH | 仓库内.venv-dltrain；示例运行使用相同路径 |
 | PYTHON_BIN | /usr/local/python3.12.13/bin/python3.12 |
 | CANN_ENV_FILE | /usr/local/Ascend/cann/set_env.sh |
 | ATB_ENV_FILE | /usr/local/Ascend/nnal/atb/set_env.sh，存在时加载 |
 | PIP_INDEX_URL | 华为云PyPI镜像 |
 | PIP_EXTRA_INDEX_URL | 华为云Ascend软件源 |
-| MODEL_PATH | --check-provider时使用的本地模型目录 |
-
-可选Provider配置检查及已有隔离环境复用：
+| MODEL_PATH | 可选Provider检查所用的本地权重目录 |
 
 ```bash
+bash install.sh --dry-run
 VENV_PATH="$PWD/.venv-clean-test" \
 MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview \
 bash install.sh --check-provider
 ```
 
-成功时输出`DLTRAIN_IMPORT_CHECK_OK`和`DLTRAIN_CLEAN_ENV_READY`；开启Provider检查后还须出现`INTERNS2_PROVIDER_CONFIG_OK`。日志和实际包版本写入`logs/install-*.log`及对应的`*-packages.txt`。Git目录记录当前提交；ZIP目录使用已有的`source-commit.txt`，没有记录时会明确标注，安装不依赖Git。
+默认安装不需要模型权重。成功输出`DLTRAIN_IMPORT_CHECK_OK`和`DLTRAIN_CLEAN_ENV_READY`；启用Provider检查后还应有`INTERNS2_PROVIDER_CONFIG_OK`。日志和包版本保存为`logs/install-*.log`及对应的`*-packages.txt`。Git目录记录提交；ZIP目录读取已有source-commit.txt，没有记录时会明确标注。
 
-2026-11-26，提交`239cde340cc8db7b7d67303aebf69a6a390ccac5`的ZIP源码在原开发机的新目录及`.venv-clean-test`中，按上述依赖和源码安装命令通过了隔离环境`pip check`及Provider检查。这是手动命令的验证记录；新`install.sh`入口尚待服务器执行和全新开发机复验。
+environment/requirements/中的部分依赖仍为范围约束，不等同于完整环境锁文件。CANN加入PYTHONPATH的附加工具可能在安装时报告缺依赖；隔离虚拟环境检查采用`python -I -m pip check`，并执行实际导入检查。这不代表CANN profiler等附加功能已验证。日志中的FLA探测、模型docstring和弃用提示应保留。
 
-CANN环境脚本会将系统工具包加入PYTHONPATH，因此安装阶段可能报告`ms-service-profiler`等外部工具缺依赖或版本冲突。安装器用`python -I -m pip check`单独检查虚拟环境，并继续执行真实导入检查；这不代表CANN profiler等附加功能已验证。HF模型的docstring报错、FLA可选探测和弃用提示也应保留在日志中；实际训练仍需单独验证。
+environment/prepare_workspace.py检查当前文件布局及Bridge到Core的链接，并写入组件基准提交记录；不会再复制顶层脚本。它不会安装依赖或启动NPU任务。
 
-## 源码安装方式
+## 验证模块
 
-准备Python3.12虚拟环境、兼容驱动/CANN及依赖后，在仓库根目录执行源码安装：
+| 文件 | 用途 |
+| --- | --- |
+| validation/check_interns2_provider.py | 注册HF模型和Bridge，生成并检查Provider配置，也是训练初始化的一部分 |
+| validation/adamw_dist_update_probe.py | 验证首步FP32主权重、AdamW一二阶矩及BF16回写 |
+| validation/adamw_shard_layout.py | 确定当前rank拥有的优化器参数分片和抽检点 |
+| validation/adamw_math.py | 学习率调度及首步AdamW参考公式 |
+| validation/optimizer_update_probe.py | 更新验证所需的标量及梯度抽检辅助函数 |
 
-```bash
-python -m pip install --no-deps --no-build-isolation -e src/DLTrain-NPUEngine
-python -m pip install --no-deps --no-build-isolation -e src/DLTrain-framework
-python -m pip install --no-deps --no-build-isolation -e src/DLTrain-Adaptor
-```
-
-Bridge通过Provider中的源码路径加载，不单独安装以重解依赖。ModelOpt distill/Megatron插件需可用，原实测安装nvidia-modelopt0.44.0；原生tokenizer还需要sentencepiece0.2.1。已有editable安装在组件目录改名后，需要使用上述新路径重新安装。
-
-## 运行示例
+## 运行与记录
 
 ```bash
-MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview \
 VENV_PATH="$PWD/.venv-dltrain" \
+MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview \
 bash examples/run.sh
 ```
 
-启动脚本以当前仓库为WORKDIR，默认20步、SEQ64、MBS1、DP8、梯度累积4，即GBS32；TP2/PP1/EP8/ETP2/CP1，BF16。优化器为Core原生分布式AdamW，峰值LR1e-5，沿用500步余弦调度及20步warmup，示例只执行前20步。
+默认20步、SEQ64、MBS1、DP8和梯度累积4次，得到GBS32；TP2/PP1/EP8/ETP2/CP1、BF16。分布式AdamW峰值LR1e-5，沿用500步余弦调度和20步warmup。可用TRAIN_STEPS调整步数。
 
-脚本读取data/en_head.json.gz，先验证SHA256，然后使用原生tokenizer生成datasets/interns2-redpajama-raw缓存。该独立目录用于区分早期筛选JSONL生成的缓存。预处理逻辑位于preprocess/prepare_interns2_corpus.py，支持逐行JSON及gzip输入。
+启动脚本验证data/en_head.json.gz的SHA256，调用framework内的原生tokenizer分词脚本，随后执行examples/train_interns2.py。训练及验证代码直接从所在目录加载。日志写入logs/，指标、配置、源码快照及首步检查写入runs/；MTP关闭、视觉冻结，不保存训练checkpoint。
 
-environment/prepare_workspace.py检查源码入口与Bridge的Core链接，随后将运行资源复制到仓库顶层，以适配现有训练入口；发现同名文件内容不同会停止。它还按component_versions.py记录组件基准版本，不安装依赖或启动NPU任务。
-
-运行日志写入logs/<RUN_ID>.log，逐步测量、配置、摘要和更新探针结果写入runs/<RUN_ID>/。数据与模型权重路径可通过MODEL_PATH、CORPUS_DIR等环境变量调整。脚本参数和预览命令见[示例说明](../examples/README.md)。
-
-## 已有训练入口
-
-- runtime/：Provider注册、真实权重加载、训练循环及优化器更新探针。
-- launch/：早期独立SGD、AdamW及3步验证后500步测量的协调器，保留其原实测工作目录配置。
-- preprocess/：原生tokenizer语料准备。
-
-新示例默认20步；launch中的原500步协调器不是默认示例。MTP关闭、视觉冻结，当前流程不保存训练checkpoint。指定起始权重revision的文件身份及DLRL真实调用、联合RL参数更新和导出仍须专项留证。
+239cde3的ZIP源码在原开发机的新目录及.venv-clean-test中通过手动安装、Provider和20步训练检查。当前目录迁移、本安装入口、全新开发机以及DLRL集成仍需相应实机验证。
