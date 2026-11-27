@@ -65,7 +65,7 @@ if (( dry_run )); then
 fi
 
 cd "$WORKDIR"
-venv_path="${VENV_PATH:-$WORKDIR/.venv}"
+venv_path="${VENV_PATH:-$WORKDIR/.venv-dltrain}"
 if [[ -f "$venv_path/bin/activate" ]]; then
     source "$venv_path/bin/activate"
 elif [[ -z "${VIRTUAL_ENV:-}" ]]; then

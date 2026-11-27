@@ -12,7 +12,7 @@ MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview bash examples/run.sh
 | 环境变量 | 默认值或用途 |
 | --- | --- |
 | MODEL_PATH | /mnt/afs-a3-weight-share/Intern-S2-Preview |
-| VENV_PATH | 仓库下.venv；也可使用已激活的虚拟环境 |
+| VENV_PATH | 仓库下.venv-dltrain，与install.sh一致；也可指定其他环境 |
 | TRAIN_STEPS | 20个优化器更新步 |
 | SCHEDULE_STEPS | 500，示例沿用实测学习率调度的前20步 |
 | SEQ_LENGTH / NUM_MICROBATCHES | 64 / 4，MBS1和DP8得到GBS32 |

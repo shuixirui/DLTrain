@@ -7,6 +7,7 @@
 ```bash
 git clone https://github.com/shuixirui/DLTrain.git
 cd DLTrain
+bash install.sh
 bash examples/run.sh --dry-run
 ```
 
@@ -14,6 +15,20 @@ bash examples/run.sh --dry-run
 
 ```bash
 bash examples/run.sh
+```
+
+`install.sh`面向已具备驱动和CANN的Linux ARM64开发机，默认使用Python3.12.13创建仓库内`.venv-dltrain`，安装固定核心依赖及仓库源码，并检查NPU和导入路径。支持ZIP解压目录；不会启动训练。安装日志与实际包版本保存在`logs/install-*.log`和对应的`*-packages.txt`。完整前提、镜像及环境变量见[安装说明](tools/README.md)。
+
+```bash
+bash install.sh --dry-run
+MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview bash install.sh --check-provider
+```
+
+隔离测试环境可在安装和运行时指定同一路径：
+
+```bash
+VENV_PATH="$PWD/.venv-clean-test" bash install.sh --check-provider
+VENV_PATH="$PWD/.venv-clean-test" bash examples/run.sh
 ```
 
 示例默认20个优化器更新步、SEQ64、GBS32和16个逻辑NPU，使用仓库中的RedPajama原始分片。脚本先准备工作目录和原生tokenizer缓存，再启动分布式AdamW训练；`--dry-run`仅预览命令。完整环境要求及参数见[训练说明](tools/README.md)和[Intern-S2示例](examples/README.md)。
