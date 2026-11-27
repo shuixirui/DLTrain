@@ -1,7 +1,5 @@
 # 环境与验证
 
-tools只保留安装与20步训练需要的12个功能文件：environment中7个，validation中5个。训练入口位于顶层examples/，分词实现在src/DLTrain-framework/tools/prepare_interns2_corpus.py。
-
 ## 环境安装
 
 实测组合为Linux ARM64、Python3.12.13、CANN9.1.0镜像、PyTorch2.10.0、torch-npu2.10.0.post7、Triton-Ascend3.6.0.post2、TENPU2.17.1、Transformers5.2.0、NumPy1.26.4及PyArrow24.0.0。训练使用16个逻辑NPU。此前平台镜像为`registry2.d.pjlab.org.cn/ccr-lepton-official-images/a3-cann:9.1.0-a3-ubuntu22.04-py3.12`；该标签不等于镜像摘要。
@@ -46,17 +44,3 @@ environment/prepare_workspace.py检查当前文件布局及Bridge到Core的链�
 | validation/adamw_shard_layout.py | 确定当前rank拥有的优化器参数分片和抽检点 |
 | validation/adamw_math.py | 学习率调度及首步AdamW参考公式 |
 | validation/optimizer_update_probe.py | 更新验证所需的标量及梯度抽检辅助函数 |
-
-## 运行与记录
-
-```bash
-VENV_PATH="$PWD/.venv-dltrain" \
-MODEL_PATH=/mnt/afs-a3-weight-share/Intern-S2-Preview \
-bash examples/run.sh
-```
-
-默认20步、SEQ64、MBS1、DP8和梯度累积4次，得到GBS32；TP2/PP1/EP8/ETP2/CP1、BF16。分布式AdamW峰值LR1e-5，沿用500步余弦调度和20步warmup。可用TRAIN_STEPS调整步数。
-
-启动脚本验证data/en_head.json.gz的SHA256，调用framework内的原生tokenizer分词脚本，随后执行examples/train_interns2.py。训练及验证代码直接从所在目录加载。日志写入logs/，指标、配置、源码快照及首步检查写入runs/；MTP关闭、视觉冻结，不保存训练checkpoint。
-
-239cde3的ZIP源码在原开发机的新目录及.venv-clean-test中通过手动安装、Provider和20步训练检查。当前目录迁移、本安装入口、全新开发机以及DLRL集成仍需相应实机验证。
